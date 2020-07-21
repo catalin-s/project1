@@ -1,0 +1,88 @@
+---
+title: "project1"
+author: "Catalin Prajitura"
+date: "7/21/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+## Libraries to include
+library(tidyverse)
+library(lubridate)
+# For Veil of Darkness
+library(lutz)
+library(suncalc)
+library(splines)
+
+```
+
+```{r message=FALSE, warning=FALSE}
+## Load the data
+# Replace the path below with the path to where your data lives
+data_path <- file.choose()
+stops <- read_csv(data_path)
+
+# Additional data and fixed values pulled from https://www.census.gov/quickfacts/NY
+population_2019 <- tibble(
+  subject_race = c(
+    "asian/pacific islander", "black", "hispanic", "other", "white"
+  ),
+  num_people = c(1770274, 3423826, 3754537, 719781, 10757819)
+) %>% 
+  mutate(subject_race = as.factor(subject_race))
+
+# New York State Center GPS coordinates
+center_lat <- 43.00035
+center_lng <- -75.4999
+```
+
+
+```{r}
+colnames(stops)
+```
+
+```{r}
+nrow(stops)
+```
+
+```{r}
+min(stops$date)
+max(stops$date)
+```
+
+```{r}
+stops %>%
+  mutate(year = year(date)) %>% 
+  count(year)
+```
+
+```{r}
+stops %>% 
+  count(subject_race)
+```
+
+```{r}
+# This method builds off of using `count` as above
+options(scipen = 999)
+stops %>% 
+  count(subject_race) %>% 
+  mutate(prop = n / sum(n))
+```
+
+```{r}
+stops %>% 
+  count(year = year(date), subject_race) %>% 
+  ggplot(aes(x = year, y = n, color = subject_race)) +
+  geom_point() +
+  geom_line() 
+```
+
+```{r}
+stops %>% 
+  count(subject_race) %>% 
+  left_join(
+    population_2019,
+    by = "subject_race"
+  ) %>% 
+  mutate(stop_rate = n / num_people)
+```
