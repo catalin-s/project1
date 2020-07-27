@@ -9,18 +9,21 @@ output: html_document
 ## Libraries to include
 library(tidyverse)
 library(lubridate)
-# For Veil of Darkness
 library(lutz)
 library(suncalc)
 library(splines)
-
+library(MASS)
+library(ggplot2)
+library(ggmap)
+library(maps)
+library(mapdata)
 ```
 
 ```{r message=FALSE, warning=FALSE}
 ## Load the data
 # Replace the path below with the path to where your data lives
 data_path <- file.choose()
-stops <- read_csv(data_path)
+stops <- read_rds(data_path)
 
 # Additional data and fixed values pulled from https://www.census.gov/quickfacts/NY
 population_2019 <- tibble(
@@ -86,3 +89,51 @@ stops %>%
   ) %>% 
   mutate(stop_rate = n / num_people)
 ```
+
+```{r}
+subregion = stops$county_name
+freqdata <- cbind.data.frame(table(subregion))
+
+levels(freqdata$subregion) <- c("albany", "allegany", "bronx", "broome", "cattaraugus", "cayuga", "chautauqua", "chemung", "chenango", "clinton", "columbia", "cortland", "delaware", "dutchess", "erie", "essex", "franklin", "fulton", "genesee", "greene", "hamilton", "herkimer", "jefferson", "kings", "lewis", "livingston", "madison", "monroe", "montgomery", "nassau", "new york", "niagara", "oneida", "onondaga", "ontario", "orange", "orleans", "oswego", "otsego", "putnam", "queens", "rensselaer", "richmond", "rockland", "saratoga", "schenectady", "schoharie", "schuyler", "seneca", "st-17", "st lawrence", "steuben", "suffolk", "sullivan", "tioga", "tompkins", "ulster", "warren", "washington", "wayne", "westchester", "wyoming", "yates")
+freqdata <- freqdata[-50,]
+```
+
+```{r}
+usa <- map_data("usa")
+states <- map_data("state")
+ny_df <- subset(states, region == "new york")
+counties <- map_data("county")
+ny_county <- subset(counties, region == "new york")
+ny_base <- ggplot(data = ny_df, mapping = aes(x = long, y = lat, group = group)) + 
+  coord_fixed(1.3) + 
+  geom_polygon(color = "black", fill = "gray")
+
+combined_data <- inner_join(ny_county, freqdata)
+```
+
+```{r}
+ditch_the_axes <- theme(
+  axis.text = element_blank(),
+  axis.line = element_blank(),
+  axis.ticks = element_blank(),
+  panel.border = element_blank(),
+  panel.grid = element_blank(),
+  axis.title = element_blank()
+  )
+
+elbow_room1 <- ny_base + 
+      geom_polygon(data = combined_data, aes(fill = Freq), color = "white") +
+      geom_polygon(color = "black", fill = NA) +
+      theme_bw() +
+      ditch_the_axes
+
+elbow_room1 
+
+eb2 <- elbow_room1 + 
+    scale_fill_gradientn(colours = rev(rainbow(7)),
+                         breaks = c(2, 4, 10, 100, 1000, 10000),
+                         trans = "log10")
+eb2
+
+```
+
